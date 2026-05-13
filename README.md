@@ -5,26 +5,14 @@ date: "2026-05-08"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
 
-## R Markdown
+Global Envelope Test: Interactive Simulation
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+This repository contains a Shiny dashboard designed to visualize the **Maximum Absolute Deviant Global Envelope Test** using B-splines and Gaussian Process (GP) noise.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+How to Run
+To run this application locally, ensure you have R installed and run:
 
-```{r cars}
-summary(cars)
-```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```R
+install.packages(c("shiny", "MASS", "splines2", "plotly", "dplyr"))
+shiny::runGitHub("YOUR_USERNAME/Global-Envelope-Simulation")

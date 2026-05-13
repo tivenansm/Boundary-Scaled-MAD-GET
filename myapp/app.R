@@ -47,7 +47,6 @@ server <- function(input, output, session) {
   }
   
   sim_data <- eventReactive(input$run_sim, {
-    # Renamed progress message to MAD-GET
     withProgress(message = 'Calculating Scaled MAD-GET...', value = 0, {
       
       n_loc  <- input$n_loc
@@ -72,7 +71,7 @@ server <- function(input, output, session) {
       pvals_global <- numeric(n_reps)
       df_envelope <- NULL
       df_splines  <- NULL
-      df_resids   <- NULL # For the dark blue lines
+      df_resids   <- NULL 
       pooled_noise <- NOISE1 + NOISE2
       
       for (i in 1:n_reps) {
@@ -93,8 +92,7 @@ server <- function(input, output, session) {
             data.frame(x = x, y = y2, Group = "Modified (Period B)")
           )
           
-          # Capture first 10 null simulations as "Dark Blue Residuals"
-          resids_to_plot <- sim_diff[1:min(10, n_sims), ]
+          resids_to_plot <- sim_diff[1:min(50, n_sims), ]
           df_resids <- data.frame(
             x = rep(x, each = nrow(resids_to_plot)),
             y = as.numeric(t(resids_to_plot)),
@@ -121,7 +119,7 @@ server <- function(input, output, session) {
     # Plot 2: MAD-GET Difference
     p2 <- plotly::plot_ly(data = d$envelope, x = ~x) %>%
       
-      # 1. The Ribbon (Skyblue with 0.25 alpha)
+      # 1. Simulations
       plotly::add_ribbons(ymin = ~Lower_Bound, ymax = ~Upper_Bound, 
                           fillcolor = "rgba(135, 206, 235, 0.25)", 
                           line = list(color = "transparent"), 
@@ -133,7 +131,7 @@ server <- function(input, output, session) {
                         line = list(color = "blue", dash = "dash", width = 1.5), 
                         showlegend = TRUE, name = "95% GET") %>%
       
-      # 3. Lower Edge (Blue Dashed) - Set back to FALSE
+      # 3. Lower Edge (Blue Dashed) 
       plotly::add_lines(y = ~Lower_Bound, 
                         line = list(color = "blue", dash = "dash", width = 1.5), 
                         showlegend = FALSE, name = "95% GET") %>%
@@ -163,7 +161,7 @@ server <- function(input, output, session) {
         )
       )
     
-    # Plot 3: Histogram (Silent Legend)
+    # Plot 3: Histogram 
     p3 <- plotly::plot_ly(x = ~d$pvals, type = "histogram", histnorm = "probability density", 
                           xbins = list(start = 0, end = 1, size = 0.05),
                           marker = list(color = "lightblue", line = list(color = "white", width = 1)),
@@ -172,7 +170,6 @@ server <- function(input, output, session) {
                      shapes = list(list(type = "line", x0 = 0, x1 = 1, y0 = 1, y1 = 1, xref = "paper", line = list(dash = "dot"))))
     
     # Combine subplots
-    # Removed the plotly::style() overrides that were hiding the legends!
     subplot(p1, p2, p3, nrows = 3, margin = 0.07, titleY = TRUE)     
   })
 }

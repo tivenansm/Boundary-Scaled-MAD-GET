@@ -5,7 +5,7 @@ library(plotly)
 library(dplyr)
 
 ui <- fluidPage(
-  titlePanel("Interactive Simulation for Global Scaled MAD Envelope Test"),
+  titlePanel("Interactive Simulation for Scaled Global MAD Envelope Test"),
   
   sidebarLayout(
     sidebarPanel(
@@ -81,8 +81,17 @@ server <- function(input, output, session) {
         obs_diff <- as.numeric(y1 - y2)
         sim_diff <- simulate_gp_residuals(x, n_sims, noise_var = pooled_noise)
         
+        # 1. Calculate Pointwise Standard Deviation for Scaling
+        pointwise_sd <- apply(sim_diff, 2, sd)
+        
+        # 2. Scale all curves (sweep divides each column by its respective pointwise_sd)
         all_curves <- rbind(obs_diff, sim_diff)
-        T_all <- apply(abs(all_curves), 1, max)
+        all_curves_scaled <- sweep(all_curves, 2, pointwise_sd, FUN = "/")
+        
+        # 3. Calculate Scaled Test Statistic (Maximum Absolute Deviant)
+        T_all <- apply(abs(all_curves_scaled), 1, max)
+        
+        # 4. Calculate P-value
         ranks <- rank(-T_all, ties.method = "random")
         pvals_global[i] <- (sum(ranks[-1] <= ranks[1]) + 1) / (n_sims + 1)
         
@@ -92,16 +101,22 @@ server <- function(input, output, session) {
             data.frame(x = x, y = y2, Group = "Modified (Period B)")
           )
           
-          resids_to_plot <- sim_diff[1:min(50, n_sims), ]
+          resids_to_plot <- sim_diff[1:min(10, n_sims), ]
           df_resids <- data.frame(
             x = rep(x, each = nrow(resids_to_plot)),
             y = as.numeric(t(resids_to_plot)),
             id = rep(1:nrow(resids_to_plot), times = length(x))
           )
           
-          k_alpha <- floor(0.05 * (n_sims + 1))
-          lower <- apply(sim_diff, 2, function(col) sort(col)[k_alpha])
-          upper <- apply(sim_diff, 2, function(col) sort(col)[n_sims - k_alpha])
+          # 5. Construct the TRUE Global Envelope for Visuals
+          # Find the 95th percentile of the simulated test statistics
+          T_sims <- T_all[-1]
+          T_crit <- sort(T_sims)[ceiling(0.95 * n_sims)]
+          
+          # Multiply the critical value by the scaling factor to get it back to the original scale
+          lower <- -T_crit * pointwise_sd
+          upper <-  T_crit * pointwise_sd
+          
           df_envelope <- data.frame(x = x, Obs_Diff = obs_diff, Lower_Bound = lower, Upper_Bound = upper)
         }
       }
@@ -123,18 +138,18 @@ server <- function(input, output, session) {
       plotly::add_ribbons(ymin = ~Lower_Bound, ymax = ~Upper_Bound, 
                           fillcolor = "rgba(135, 206, 235, 0.25)", 
                           line = list(color = "transparent"), 
-                          name = "Simulations",            
-                          showlegend = FALSE) %>%        
+                          name = "95% Global Envelope",            
+                          showlegend = TRUE) %>%        
       
       # 2. Upper Edge (Blue Dashed)
       plotly::add_lines(y = ~Upper_Bound, 
                         line = list(color = "blue", dash = "dash", width = 1.5), 
-                        showlegend = TRUE, name = "95% GET") %>%
+                        showlegend = FALSE) %>%
       
-      # 3. Lower Edge (Blue Dashed) 
+      # 3. Lower Edge (Blue Dashed)
       plotly::add_lines(y = ~Lower_Bound, 
                         line = list(color = "blue", dash = "dash", width = 1.5), 
-                        showlegend = FALSE, name = "95% GET") %>%
+                        showlegend = FALSE) %>%
       
       # 4. The Main Observed Difference (Red)
       plotly::add_lines(y = ~Obs_Diff, 
@@ -173,5 +188,7 @@ server <- function(input, output, session) {
     subplot(p1, p2, p3, nrows = 3, margin = 0.07, titleY = TRUE)     
   })
 }
-
 shinyApp(ui = ui, server = server)
+
+
+
